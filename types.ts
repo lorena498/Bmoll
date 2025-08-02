@@ -15,16 +15,13 @@ export interface Video {
   videoUrl: string;
 }
 
-export interface Track {
-    id: number;
-    title: string;
-    artist: string;
-    albumArtUrl: string;
-    streamUrl: string;
-}
-
 export interface Link {
-  name: string;
+  name:string;
   url: string;
   icon?: JSX.Element;
+}
+
+export interface ChatMessage {
+    role: 'user' | 'model';
+    text: string;
 }

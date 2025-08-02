@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { videos } from '../constants';
 import { ICONS } from '../constants';
 import type { Video } from '../types';
 
@@ -23,7 +22,11 @@ const VideoCard: React.FC<{ video: Video }> = ({ video }) => {
     );
 };
 
-const Videos: React.FC = () => {
+interface VideosProps {
+    videos: Video[];
+}
+
+const Videos: React.FC<VideosProps> = ({ videos }) => {
     return (
         <section className="py-20 bg-slate-900/50">
             <div className="container mx-auto px-6">
@@ -31,7 +34,11 @@ const Videos: React.FC = () => {
                     Videos Recientes
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {videos.map(video => <VideoCard key={video.id} video={video} />)}
+                    {videos.length > 0 ? (
+                        videos.map(video => <VideoCard key={video.id} video={video} />)
+                    ) : (
+                        <p className="col-span-full text-center text-gray-400">No hay videos disponibles por el momento.</p>
+                    )}
                 </div>
             </div>
         </section>

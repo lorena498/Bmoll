@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { products } from '../constants';
 import { ICONS } from '../constants';
 import type { Product } from '../types';
 
@@ -39,8 +38,11 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => {
     );
 };
 
+interface StoreProps {
+  products: Product[];
+}
 
-const Store: React.FC = () => {
+const Store: React.FC<StoreProps> = ({ products }) => {
   return (
     <section className="py-20 bg-slate-900">
       <div className="container mx-auto px-6">
@@ -48,7 +50,11 @@ const Store: React.FC = () => {
           Nuestra Tienda
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {products.map(product => <ProductCard key={product.id} product={product} />)}
+          {products.length > 0 ? (
+            products.map(product => <ProductCard key={product.id} product={product} />)
+          ) : (
+            <p className="col-span-full text-center text-gray-400">La tienda está vacía por ahora. ¡Vuelve pronto!</p>
+          )}
         </div>
       </div>
     </section>
