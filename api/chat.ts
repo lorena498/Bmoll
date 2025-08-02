@@ -26,21 +26,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         // Convert the client-side message history to the format Google's SDK expects
-        const googleHistory: Content[] = (history || []).map((msg: { role: 'user' | 'model', text: string }) => ({
+        const contents: Content[] = (history || []).map((msg: { role: 'user' | 'model', text: string }) => ({
             role: msg.role,
             parts: [{ text: msg.text }]
         }));
 
-        const chatSession = ai.chats.create({
+        // Add the current user message to the conversation history
+        contents.push({ role: 'user', parts: [{ text: message }] });
+
+        // Use the more direct generateContent method, which is ideal for stateless serverless functions.
+        const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
-            history: googleHistory,
+            contents: contents, // Pass the full conversation history
             config: {
                 systemInstruction: 'Eres B-MOLL, un artista de música urbana en ascenso. Tu flow es único. Eres cool, amigable y apasionado por tu música. Mantén tus respuestas cortas, en español y con la jerga que usaría un artista como tú. Habla con tus fans de pana. No menciones nunca que eres una IA.',
             }
         });
-
-        // The sendMessage method expects the message content directly, not an object.
-        const response = await chatSession.sendMessage(message);
         
         // Send the model's response text back to the client
         res.status(200).json({ text: response.text });

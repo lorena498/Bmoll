@@ -28,9 +28,11 @@ const Chatbot: React.FC = () => {
         const currentUserInput = userInput.trim();
         const userMessage: ChatMessage = { role: 'user', text: currentUserInput };
         
+        // The history sent to the backend should be the real conversation, excluding the initial greeting.
+        const conversationHistory = messages.slice(1);
+
         // Add user message to the chat state immediately for a responsive UI
         setMessages(prev => [...prev, userMessage]);
-        const conversationHistory = [...messages]; // Capture history before the new message
         setUserInput('');
         setIsLoading(true);
 
@@ -40,7 +42,7 @@ const Chatbot: React.FC = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    history: conversationHistory, // Send the conversation history
+                    history: conversationHistory, // Send the clean conversation history
                     message: currentUserInput 
                 }),
             });
