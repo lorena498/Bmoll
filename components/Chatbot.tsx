@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, Chat } from "@google/genai";
 import type { ChatMessage } from '../types';
 
 // Simple spinner component
@@ -8,35 +7,12 @@ const Spinner = () => (
 );
 
 const Chatbot: React.FC = () => {
-    const [chat, setChat] = useState<Chat | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([
+        { role: 'model', text: '¡Qué onda! Soy B-MOLL. Tírame cualquier pregunta que tengas sobre mi música o lo que sea. 🔥' }
+    ]);
     const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        try {
-            // NOTE: The API key is sourced from `process.env.API_KEY`, which is assumed to be configured in the deployment environment.
-            if (!process.env.API_KEY) {
-                console.error("API_KEY environment variable not set.");
-                setError("La configuración del chat no está disponible en este momento.");
-                return;
-            }
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const chatSession = ai.chats.create({
-                model: 'gemini-2.5-flash',
-                config: {
-                    systemInstruction: 'Eres B-MOLL, un artista de música urbana en ascenso. Eres cool, amigable y apasionado por tu música. Mantén tus respuestas concisas, en español y atractivas para tus fans. No menciones que eres una IA.',
-                }
-            });
-            setChat(chatSession);
-            setMessages([{ role: 'model', text: '¡Qué onda! Soy B-MOLL. Tírame cualquier pregunta que tengas sobre mi música o lo que sea. 🔥' }]);
-        } catch (e: any) {
-            console.error("Failed to initialize AI Chat:", e);
-            setError("No se pudo iniciar el chat. Asegúrate de que la clave de API esté configurada.");
-        }
-    }, []);
 
     useEffect(() => {
         // Scroll to bottom of chat container when new messages are added
@@ -47,22 +23,41 @@ const Chatbot: React.FC = () => {
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!userInput.trim() || isLoading || !chat) return;
+        if (!userInput.trim() || isLoading) return;
 
-        const userMessage: ChatMessage = { role: 'user', text: userInput.trim() };
+        const currentUserInput = userInput.trim();
+        const userMessage: ChatMessage = { role: 'user', text: currentUserInput };
+        
+        // Add user message to the chat state immediately for a responsive UI
         setMessages(prev => [...prev, userMessage]);
+        const conversationHistory = [...messages]; // Capture history before the new message
         setUserInput('');
         setIsLoading(true);
-        setError(null);
 
         try {
-            const response = await chat.sendMessage({ message: userMessage.text });
-            const modelMessage: ChatMessage = { role: 'model', text: response.text };
+            // Securely call the backend API proxy located at /api/chat
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    history: conversationHistory, // Send the conversation history
+                    message: currentUserInput 
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Error: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            const modelMessage: ChatMessage = { role: 'model', text: data.text };
             setMessages(prev => [...prev, modelMessage]);
+
         } catch (e: any) {
             console.error("Error sending message:", e);
             const errorMessage = 'Oops, algo salió mal. Intenta de nuevo más tarde.';
-            setError(errorMessage);
+            // Add an error message to the chat log for the user to see
             setMessages(prev => [...prev, {role: 'model', text: errorMessage}])
         } finally {
             setIsLoading(false);
@@ -106,20 +101,17 @@ const Chatbot: React.FC = () => {
                             )}
                         </div>
                         <div className="p-4 border-t border-slate-700">
-                            {error && !isLoading && (
-                                <div className="text-center text-red-400 text-xs pb-2">{error}</div>
-                            )}
                             <form onSubmit={handleSendMessage} className="flex items-center gap-3">
                                 <input
                                     type="text"
                                     value={userInput}
                                     onChange={(e) => setUserInput(e.target.value)}
-                                    placeholder={!chat || error ? "El chat no está disponible" : "Escribe tu mensaje..."}
-                                    disabled={isLoading || !chat || !!error}
+                                    placeholder="Escribe tu mensaje..."
+                                    disabled={isLoading}
                                     className="flex-1 w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-full text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                                     aria-label="Chat input"
                                 />
-                                <button type="submit" disabled={isLoading || !userInput.trim() || !chat || !!error} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-900/50 disabled:cursor-not-allowed text-white font-bold p-3 rounded-full transition-colors duration-300 flex-shrink-0">
+                                <button type="submit" disabled={isLoading || !userInput.trim()} className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-900/50 disabled:cursor-not-allowed text-white font-bold p-3 rounded-full transition-colors duration-300 flex-shrink-0">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                                     </svg>
